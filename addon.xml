@@ -2,6 +2,7 @@
 <addon id="plugin.addon.cdaplnieoficjalnie" name="Cda.pl Nieoficjalnie" version="0.0.1" provider-name="avalanchy">
   <requires>
     <import addon="xbmc.python" version="2.24.0"/>
+    <import addon="script.module.requests" />
   </requires>
   <extension point="xbmc.python.pluginsource" library="addon.py">
     <provides>video</provides>
