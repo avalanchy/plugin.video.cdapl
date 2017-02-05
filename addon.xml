@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8" standalone="yes"?>
-<addon id="plugin.addon.cdaplnieoficjalnie" name="Cda.pl Nieoficjalnie" version="0.0.1" provider-name="avalanchy">
+<addon id="plugin.addon.cdapl" name="Cda.pl" version="1.0.0" provider-name="avalanchy">
   <requires>
     <import addon="xbmc.python" version="2.24.0"/>
     <import addon="script.module.requests" />
@@ -9,19 +9,19 @@
     <provides>video</provides>
   </extension>
   <extension point="xbmc.addon.metadata">
-    <summary lang="pl">Cda.pl szybko i skutecznie</summary>
-    <summary lang="en">Cda.pl quick i efficiently</summary>
-    <description lang="pl">Dodatek pozwala na dostęp do wideo ze strony cda.pl</description>
-    <description lang="en">Addon provides access to display video from cda.pl page</description>
+    <summary lang="pl">Cda.pl</summary>
+    <summary lang="en">Cda.pl</summary>
+    <description lang="pl">Dodatek pozwala wyszukiwanie i wyświetlanie długich wideo ze strony cda.pl</description>
+    <description lang="en">Addon provides searching and displaying long videos from cda.pl page</description>
     <disclaimer lang="pl">Autorzy nie przechowują i nie rozpowrzechniają treści wyświetlanych przez ten dodatek. Autorzy nie ma żadnego powiązania z dostawcą treści.</disclaimer>
     <disclaimer lang="en">The authors does not host or distribute any of the content displayed by this addon. The author does not have any affiliation with the content provider.</disclaimer>
     <language>pl</language>
     <platform>all</platform>
     <license>GPL-2.0</license>
-    <forum>https://github.com/avalanchy/plugin.video.cdaplunofficial</forum>
-    <website>https://github.com/avalanchy/plugin.video.cdaplunofficial</website>
+    <forum>https://github.com/avalanchy/plugin.video.cdapl</forum>
+    <website>https://github.com/avalanchy/plugin.video.cdapl</website>
     <email></email>
-    <source>https://github.com/avalanchy/plugin.video.cdaplunofficial</source>
+    <source>https://github.com/avalanchy/plugin.video.cdapl</source>
     <assets>
         <icon>icon.png</icon>
         <fanart></fanart>

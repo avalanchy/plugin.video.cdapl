@@ -1,24 +1,25 @@
-#coding: utf8
-import logging
+# coding: utf8
 import json
 import re
 import sys
+import urllib
 import urllib2
+import urlparse
 
 import xbmc
 import xbmcaddon
 import xbmcgui
 import xbmcplugin
 
-
-# Get the plugin url in plugin:// notation.
-__url__ = sys.argv[0]
-# Get the plugin handle as an integer number.
-__handle__ = int(sys.argv[1])
-__query__ = sys.argv[2]
+import bs4
 
 
-def get_cda_video_data(cda_id, quality):
+__URL__ = sys.argv[0]
+__HANDLE__ = int(sys.argv[1])
+__QUERY__ = dict(urlparse.parse_qsl(sys.argv[2][1:]))
+
+
+def fetch_video_details(cda_id, quality):
     url = 'http://m.cda.pl/video/{}?wersja={}'
     url = url.format(cda_id, quality)
     response = urllib2.urlopen(url)
@@ -28,23 +29,19 @@ def get_cda_video_data(cda_id, quality):
     player_data = json.loads(player_data)
     return {
         'title': title,
+        'url': player_data['video']['file'] + '.mp4',
         'poster_url': player_data['video']['poster'],
-        'video_url': player_data['video']['file'] + '.mp4',
     }
 
 
-
-import urllib
-from bs4 import BeautifulSoup
-
-def request_search(query):
-    query = urllib.quote_plus(query)
+def fetch_search_results(user_input):
+    query = urllib.quote_plus(user_input)
     url_base = 'http://m.cda.pl/szukaj?q={}&gdzie=v&duration=dlugie&quality=all&s=best'
     url = url_base.format(query)
     response = urllib2.urlopen(url)
     html = response.read()
     items = []
-    bs = BeautifulSoup(html, 'lxml')
+    bs = bs4.BeautifulSoup(html, 'html.parser')
     results = bs.find_all('div', attrs={'class': 'box-elem'})
     for result in results:
         cda_id = result.find('a').attrs['href'].split('/')[-1]
@@ -59,44 +56,72 @@ def request_search(query):
     return items
 
 
-match = re.match('\?cda-id=(\w+)&quality=(\w*)', __query__)
+def play_video(cda_id, quality):
+    video = fetch_video_details(cda_id, quality)
+    # add some basic data
+    li = xbmcgui.ListItem(video['title'], thumbnailImage=video['poster_url'])
+    li.setInfo('video', {'Title': video['title']})
+    xbmc.Player().play(video['url'], li)
 
 
+def do_search():
+    user_input = xbmcgui.Dialog().input('Wpisz tytuł filmu')
+    if user_input == '':
+        return
 
-if match:
-    cda_id, quality = match.groups()
-    obj = get_cda_video_data(cda_id, quality)
+    search_results = fetch_search_results(user_input)
 
-    # we gonna play movie
-    player = xbmc.Player()
-    player.play(obj['video_url'])
-    sys.exit(0)
+    if not search_results:
+        xbmcgui.Dialog().ok('', 'Brak wyników dla: ' + user_input)
+        return
 
-
-addon = xbmcaddon.Addon()
-addonname = addon.getAddonInfo('name')
-
-user_input = xbmcgui.Dialog().input('Wpisz tytuł filmu')
-if user_input != '':
-    search_results = request_search(user_input)
-
-    kodi_search_res = []
-
+    dir_items = []
     for cda_id, title, thumb, quality, duration in search_results:
-        url = '{}?cda-id={}&quality={}'.format(__url__, cda_id, quality)
-        list_item = xbmcgui.ListItem(label=title, thumbnailImage=thumb)
-        list_item.setInfo('video', {'plot': 'bla bla bla', 'mediatype': 'movie', 'date': '01.01.2009'})
-        list_item.setProperty("IsPlayable", "true")
-        height = re.search('\d*', quality).group()
-        list_item.addStreamInfo('video', {'codec': 'h264', 'aspect': 1.78, 'width': 1920, 'height': 1080, 'duration': duration})
-        list_item.setArt({'icon': 'icon.png'})
-        kodi_search_res.append((url, list_item, False))
+        kodi_url = '{}?cda-id={}&quality={}'.format(
+            __URL__,
+            cda_id,
+            quality,
+        )
+        li = xbmcgui.ListItem(label=title, thumbnailImage=thumb)
+        li.setInfo('video', {'mediatype': 'movie'})
+        li.setProperty("IsPlayable", "true")
+        li.addStreamInfo('video', {'duration': duration})
+        li.setArt({'icon': 'icon.png'})
+        dir_items.append((kodi_url, li, False))
+    xbmcplugin.addDirectoryItems(__HANDLE__, dir_items)
 
-    xbmcplugin.addDirectoryItems(__handle__, kodi_search_res)
-
-search_item = xbmcgui.ListItem(label='Search...')
-xbmcplugin.addDirectoryItem(handle=__handle__, url=__url__+ '?mode=search', listitem=search_item, isFolder=False, totalItems=1)
+    xbmcplugin.addSortMethod(__HANDLE__, xbmcplugin.SORT_METHOD_NONE)
+    xbmcplugin.endOfDirectory(__HANDLE__)
 
 
-xbmcplugin.addSortMethod(__handle__, xbmcplugin.SORT_METHOD_NONE)
-xbmcplugin.endOfDirectory(__handle__)
+def router():
+    xbmcplugin.setContent(__HANDLE__, 'movies')
+
+    # Home menu
+    if __QUERY__ == {}:
+        search_item = xbmcgui.ListItem(label='Search...')
+        xbmcplugin.addDirectoryItem(
+            handle=__HANDLE__,
+            url=__URL__ + '?search-dialog=1',
+            listitem=search_item,
+            isFolder=True
+        )
+        xbmcplugin.addSortMethod(__HANDLE__, xbmcplugin.SORT_METHOD_NONE)
+        xbmcplugin.endOfDirectory(__HANDLE__)
+        return
+
+    # Search dialog and results
+    search_dialog = __QUERY__.get('search-dialog')
+    if search_dialog:
+        do_search()
+        return
+
+    # Play video
+    cda_id = __QUERY__.get('cda-id')
+    if cda_id:
+        quality = __QUERY__.get('quality')
+        play_video(cda_id, quality)
+        return
+
+
+router()
